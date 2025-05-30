@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Dialog</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 320px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: modalAppear 0.3s ease-out;
+        }
+        
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .modal-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .modal-text {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .close-btn:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .modal-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-container">
+        <div class="modal">
+            <button class="close-btn" onclick="closeModal()">×</button>
+            <div class="modal-icon">🔔</div>
+            <div class="modal-title">Alert Modal</div>
+            <div class="modal-text" id="modalText">
+                This is a real modal dialog!<br><br>
+                It appears over the interface just like desktop applications.<br><br>
+                Choose an action below:
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="cancelModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Hide main button since this is a modal
+        tg.MainButton.hide();
+        
+        // Set up back button to close modal
+        tg.BackButton.show();
+        tg.BackButton.onClick(closeModal);
+
+        function confirmModal() {
+            // Send confirmation data back to bot
+            tg.sendData(JSON.stringify({
+                type: 'modal_action',
+                action: 'confirm',
+                timestamp: new Date().toISOString()
+            }));
+            
+            // Show success animation
+            document.querySelector('.modal-icon').textContent = '✅';
+            document.querySelector('.modal-title').textContent = 'Confirmed!';
+            document.querySelector('#modalText').textContent = 'Action confirmed successfully!';
+            document.querySelector('.modal-buttons').style.display = 'none';
+            
+            // Auto close after 1 second
+            setTimeout(() => {
+                tg.close();
+            }, 1000);
+        }
+
+        function cancelModal() {
+            // Send cancel data back to bot
+            tg.sendData(JSON.stringify({
+                type: 'modal_action',
+                action: 'cancel',
+                timestamp: new Date().toISOString()
+            }));
+            
+            closeModal();
+        }
+
+        function closeModal() {
+            // Close the web app (modal)
+            tg.close();
+        }
+
+        // Handle escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Prevent background clicks
+        document.addEventListener('click', function(e) {
+            if (e.target === document.body) {
+                // Optional: close on background click
+                // closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
