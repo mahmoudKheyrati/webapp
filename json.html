@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #f8f8f2;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            background: #333;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+
+        .title {
+            font-size: 16px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .copy-btn {
+            background: #007acc;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: background 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #005a99;
+        }
+
+        .copy-btn:active {
+            background: #004080;
+        }
+
+        .json-display {
+            padding: 20px;
+            overflow: auto;
+            max-height: 80vh;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .json-string { color: #ce9178; }
+        .json-number { color: #b5cea8; }
+        .json-boolean { color: #569cd6; }
+        .json-null { color: #569cd6; }
+        .json-key { color: #9cdcfe; }
+        .json-punctuation { color: #d4d4d4; }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">JSON Viewer</div>
+            <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+        </div>
+        <div id="jsonDisplay" class="json-display"></div>
+    </div>
+
+    <script>
+        // Get JSON data from URL parameters or use default
+        function getJSONFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const jsonParam = urlParams.get('json');
+            
+            if (jsonParam) {
+                try {
+                    // Decode the JSON data
+                    return JSON.parse(decodeURIComponent(jsonParam));
+                } catch (error) {
+                    console.error('Error parsing JSON from URL:', error);
+                    return { "error": "Invalid JSON data provided" };
+                }
+            }
+            
+            // Default sample data if no JSON in URL
+            return {
+                "message": "No JSON data provided",
+                "usage": "Add ?json=YOUR_JSON_DATA to the URL",
+                "example": "?json=" + encodeURIComponent(JSON.stringify({"hello": "world"}))
+            };
+        }
+
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        function displayJSON(data) {
+            const formatted = JSON.stringify(data, null, 2);
+            const highlighted = syntaxHighlight(formatted);
+            document.getElementById('jsonDisplay').innerHTML = highlighted;
+        }
+
+        function copyToClipboard() {
+            const jsonText = document.getElementById('jsonDisplay').textContent;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(jsonText).then(() => {
+                    showToast('Copied!');
+                }).catch(() => {
+                    fallbackCopy(jsonText);
+                });
+            } else {
+                fallbackCopy(jsonText);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Copied!');
+            } catch (err) {
+                showToast('Copy failed');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.className = 'toast';
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 2000);
+        }
+
+        // Initialize the display with JSON from URL
+        const jsonData = getJSONFromURL();
+        displayJSON(jsonData);
+
+        // Function to update JSON data (call this from your Python bot)
+        function updateJSON(newData) {
+            displayJSON(newData);
+        }
+    </script>
+</body>
+</html>
